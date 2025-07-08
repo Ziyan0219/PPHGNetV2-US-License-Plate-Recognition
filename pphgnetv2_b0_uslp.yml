@@ -1,0 +1,123 @@
+Global:
+  output_dir: ./output/pphgnetv2_b0_license_plate_state
+  device: gpu
+  epochs: 100
+  print_batch_step: 10
+  eval_during_train: True
+  eval_interval: 5
+  save_interval: 5
+  use_visualdl: True
+  pretrained_model: https://paddle-imagenet-models-name.bj.bcebos.com/dygraph/legendary_models/PPHGNetV2_B0_ssld_pretrained.pdparams
+  checkpoints: null
+  data_root: ./PaddleClas-release/dataset/train_images/images
+  image_shape: [3, 224, 224]
+
+Arch:
+  name: PPHGNetV2_B0
+  class_num: 51
+
+Optimizer:
+  name: AdamW
+  lr:
+    name: Cosine
+    learning_rate: 0.001
+    T_max: 100
+    eta_min: 0.00001
+    warmup_epoch: 5
+  weight_decay: 0.0001
+Loss:
+  Train:
+    - CELoss:
+        weight: 1.0
+        epsilon: 0.1
+  Eval:
+    - CELoss:
+        weight: 1.0
+        epsilon: 0.1
+
+Metric:
+  Train:
+    - TopkAcc:
+        topk: [1, 5]
+  Eval:
+    - TopkAcc:
+        topk: [1, 5]
+
+DataLoader:
+  Train:
+    dataset:
+      name: ImageNetDataset
+      image_root: ./PaddleClas-release/dataset/train_images/images
+      cls_label_path: /root/PPOCR_Classify/data/license_plate_state/train_list.txt
+      transform_ops:
+        - DecodeImage:
+            to_rgb: true
+        - Resize:
+            size: [224, 224]
+            interpolation: bilinear
+        - ColorJitter:
+            brightness: 0.1
+            contrast: 0.1
+            saturation: 0.1
+            hue: 0.02
+        - RandomRotation:
+            degrees: 5
+        - NormalizeImage:
+            scale: 1./255.
+            mean: [0.485, 0.456, 0.406]
+            std: [0.229, 0.224, 0.225]
+            order: ''
+        - ToCHWImage: {}
+    sampler:
+      name: BatchSampler
+      batch_size: 32
+      drop_last: True
+      shuffle: True
+    loader:
+      num_workers: 4
+      use_shared_memory: False
+
+  Eval:
+    dataset:
+      name: ImageNetDataset
+      image_root: ./PaddleClas-release/dataset/train_images/images
+      cls_label_path: /root/PPOCR_Classify/data/license_plate_state/val_list.txt
+      transform_ops:
+        - DecodeImage:
+            to_rgb: true
+        - Resize:
+            size: [224, 224]
+            interpolation: bilinear
+        - NormalizeImage:
+            scale: 1./255.
+            mean: [0.485, 0.456, 0.406]
+            std: [0.229, 0.224, 0.225]
+            order: ''
+        - ToCHWImage: {}
+    sampler:
+      name: BatchSampler
+      batch_size: 32
+      drop_last: False
+      shuffle: False
+    loader:
+      num_workers: 4
+      use_shared_memory: False
+      
+Infer:
+  infer_imgs: /root/PPOCR_Classify/9e388c60e53d164ebe5b4ced54c0fdfd.jpg
+  batch_size: 1
+  transforms:
+    - DecodeImage:
+        to_rgb: True
+    - Resize:
+        size: [224, 224]
+        interpolation: bilinear
+    - NormalizeImage:
+        scale: 1./255.
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+        order: ''
+    - ToCHWImage: {}
+  PostProcess:
+    name: Topk
+    topk: 5 
